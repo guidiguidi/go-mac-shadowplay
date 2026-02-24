@@ -14,7 +14,8 @@ func TestRingBufferBasic(t *testing.T) {
 	}
 
 	f, ok := rb.Get()
-	if !ok || len(f.Data) != 1 || f.Data[0] != 1 || !rb.IsEmpty() {
+	data := f.Data.([]byte)
+	if !ok || len(data) != 1 || data[0] != 1 || !rb.IsEmpty() {
 		t.Fatal("get fail")
 	}
 }
@@ -33,13 +34,15 @@ func TestRingBufferOverflow(t *testing.T) {
 	}
 
 	f, _ := rb.Get()
-	if len(f.Data) != 1 || f.Data[0] != 1 {
+	data := f.Data.([]byte)
+	if len(data) != 1 || data[0] != 1 {
 		t.Fatal("order fail")
 	}
 
 	rb.Put(Frame{Data: []byte{4}})
 	f2, _ := rb.Get()
-	if len(f2.Data) != 1 || f2.Data[0] != 2 {
+	data2 := f2.Data.([]byte)
+	if len(data2) != 1 || data2[0] != 2 {
 		t.Fatal("overwrite fail")
 	}
 }
@@ -52,4 +55,3 @@ func BenchmarkPutGet(b *testing.B) {
 		rb.Get()
 	}
 }
-

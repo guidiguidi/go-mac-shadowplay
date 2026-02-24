@@ -3,7 +3,7 @@ package buffer
 import "sync/atomic"
 
 type Frame struct {
-	Data      []byte
+	Data      any
 	Timestamp int64
 }
 
