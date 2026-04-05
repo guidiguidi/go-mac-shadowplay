@@ -109,11 +109,22 @@ static SPMenuDelegate *g_menuDelegate;
 
 @end
 
-void sp_gui_setup(void) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
-        g_menuDelegate = [[SPMenuDelegate alloc] init];
-        [g_menuDelegate setupMenu];
+static void sp_gui_install_status_item_on_main(void) {
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+    g_menuDelegate = [[SPMenuDelegate alloc] init];
+    [g_menuDelegate setupMenu];
+    if (@available(macOS 11.0, *)) {
+        g_menuDelegate.statusItem.visible = YES;
+    }
+}
+
+void sp_gui_install_status_item_sync(void) {
+    if ([NSThread isMainThread]) {
+        sp_gui_install_status_item_on_main();
+        return;
+    }
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        sp_gui_install_status_item_on_main();
     });
 }
 

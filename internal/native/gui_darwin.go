@@ -26,8 +26,9 @@ func RunGUI(cb GUICallbacks) {
 	guiCB = cb
 	guiCBMu.Unlock()
 
-	C.sp_gui_setup()
-	log.Println("ShadowPlay menu bar ready")
+	// Worker goroutine: sync onto the AppKit main thread (same as [NSApp run]).
+	C.sp_gui_install_status_item_sync()
+	log.Println("ShadowPlay menu bar ready — look for the record icon in the menu bar (may be under the chevron if the bar is full)")
 	select {}
 }
 
