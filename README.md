@@ -32,7 +32,7 @@ CGO_ENABLED=1 go build -o shadowplay ./cmd/shadowplay
 ./shadowplay record -o ~/Movies/capture.mov -config ./shadowplay.example.yaml
 ```
 
-**Instant replay buffer** — keeps rolling segment files under `temp_dir`, trims by `buffer_minutes`:
+**Instant replay buffer (CLI)** — keeps rolling segment files under `temp_dir`, trims by `buffer_minutes`:
 
 ```bash
 ./shadowplay buffer
@@ -42,8 +42,17 @@ CGO_ENABLED=1 go build -o shadowplay ./cmd/shadowplay
 While buffer mode is running:
 
 - **`save_hotkey`** (default `cmd+shift+s`) — export the last `clip_seconds` to `output_dir` as `clip_YYYYMMDD_HHMMSS.mp4`
-- **`record_hotkey`** (default `cmd+shift+r`) — if different from `save_hotkey`, same save action (second shortcut). One capture stream cannot start a separate manual record while buffering.
+- **`record_hotkey`** (default `cmd+shift+r`) — if different from `save_hotkey`, same save action (second shortcut)
 - **Ctrl+C** — stop and exit
+
+**Menu bar app** — native macOS status bar icon with Start/Stop/Save/Quit:
+
+```bash
+./shadowplay gui
+./shadowplay gui -config ./shadowplay.example.yaml
+```
+
+The icon appears in the menu bar (SF Symbol `record.circle`). Click it to start/stop the buffer, save a clip, or open the clips folder. Global hotkeys from the config are also active while the buffer is running.
 
 ## Configuration
 
