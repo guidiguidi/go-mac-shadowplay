@@ -7,23 +7,27 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
 
 	"github.com/guidiguidi/go-mac-shadowplay/internal/config"
 	"github.com/guidiguidi/go-mac-shadowplay/internal/hotkeyparse"
+	"github.com/guidiguidi/go-mac-shadowplay/internal/native"
 	"github.com/guidiguidi/go-mac-shadowplay/internal/recorder"
+	"github.com/guidiguidi/go-mac-shadowplay/internal/runner"
 	"golang.design/x/hotkey"
 	"golang.design/x/hotkey/mainthread"
 )
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage:
-  %s record -o <file.mov>   Record until Ctrl+C or record_hotkey from config
-  %s buffer [-config path]  Buffer mode: save_hotkey saves clip, record_hotkey can also save (second binding)
+  %[1]s record -o <file.mov>   Record until Ctrl+C or record_hotkey
+  %[1]s buffer [-config path]  Buffer mode (CLI): save_hotkey saves clip
+  %[1]s gui    [-config path]  Menu bar app with buffer controls
 
-`, os.Args[0], os.Args[0])
+`, os.Args[0])
 	os.Exit(2)
 }
 
@@ -40,6 +44,8 @@ func realMain() {
 		cmdRecord(os.Args[2:])
 	case "buffer":
 		cmdBuffer(os.Args[2:])
+	case "gui":
+		cmdGUI(os.Args[2:])
 	default:
 		usage()
 	}
@@ -51,14 +57,6 @@ func loadCfg(path string) config.Config {
 		log.Fatal(err)
 	}
 	return c
-}
-
-func mustParseHotkey(name, spec string) ([]hotkey.Modifier, hotkey.Key) {
-	mods, key, err := hotkeyparse.Parse(spec)
-	if err != nil {
-		log.Fatalf("%s hotkey %q: %v", name, spec, err)
-	}
-	return mods, key
 }
 
 func cmdRecord(args []string) {
@@ -77,7 +75,10 @@ func cmdRecord(args []string) {
 	}
 	rec := recorder.New(cfg)
 
-	mods, key := mustParseHotkey("record_hotkey (stop recording)", cfg.RecordHotkey)
+	mods, key, err := hotkeyparse.Parse(cfg.RecordHotkey)
+	if err != nil {
+		log.Fatalf("record_hotkey %q: %v", cfg.RecordHotkey, err)
+	}
 	hkStop := hotkey.New(mods, key)
 	if err := hkStop.Register(); err != nil {
 		log.Fatal("register stop hotkey:", err)
@@ -113,7 +114,6 @@ func cmdRecord(args []string) {
 		stop()
 	case <-done:
 	}
-
 	log.Println("Stopped.")
 }
 
@@ -126,54 +126,65 @@ func cmdBuffer(args []string) {
 	if *cfgPath != "" {
 		cfg = loadCfg(*cfgPath)
 	}
-	rec := recorder.New(cfg)
-	if err := rec.StartBuffer(); err != nil {
+
+	br := runner.NewBufferRunner(cfg)
+	if err := br.Start(); err != nil {
 		log.Fatal(err)
 	}
 
-	mSave, kSave := mustParseHotkey("save_hotkey", cfg.SaveHotkey)
-	hkSave := hotkey.New(mSave, kSave)
-	if err := hkSave.Register(); err != nil {
-		log.Fatal("register save hotkey:", err)
-	}
-	defer func() { _ = hkSave.Unregister() }()
-
-	go func() {
-		for range hkSave.Keydown() {
-			if _, err := rec.SaveClip(); err != nil {
-				log.Println("save clip:", err)
-			}
-		}
-	}()
-
-	var hkRec *hotkey.Hotkey
-	if !hotkeyparse.SameBinding(cfg.SaveHotkey, cfg.RecordHotkey) {
-		mRec, kRec := mustParseHotkey("record_hotkey", cfg.RecordHotkey)
-		hkRec = hotkey.New(mRec, kRec)
-		if err := hkRec.Register(); err != nil {
-			log.Fatal("register record hotkey:", err)
-		}
-		defer func() { _ = hkRec.Unregister() }()
-		go func() {
-			for range hkRec.Keydown() {
-				if _, err := rec.SaveClip(); err != nil {
-					log.Println("save clip (record hotkey):", err)
-				}
-			}
-		}()
-	}
-
 	log.Printf("Buffer: %q → save clip, Ctrl+C exit", cfg.SaveHotkey)
-	if hkRec != nil {
-		log.Printf("Also: %q → save clip (same action, second binding)", cfg.RecordHotkey)
-	}
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 
-	if err := rec.StopBuffer(); err != nil {
+	if err := br.Stop(); err != nil {
 		log.Println("stop buffer:", err)
 	}
 	log.Println("Exiting.")
+}
+
+func cmdGUI(args []string) {
+	fs := flag.NewFlagSet("gui", flag.ExitOnError)
+	cfgPath := fs.String("config", "", "path to YAML config")
+	_ = fs.Parse(args)
+
+	cfg := config.Default()
+	if *cfgPath != "" {
+		cfg = loadCfg(*cfgPath)
+	}
+
+	br := runner.NewBufferRunner(cfg)
+
+	native.RunGUI(native.GUICallbacks{
+		OnStartBuffer: func() {
+			if err := br.Start(); err != nil {
+				log.Println("start buffer:", err)
+				return
+			}
+			native.GUISetBuffering(true)
+			log.Println("buffer started")
+		},
+		OnStopBuffer: func() {
+			if err := br.Stop(); err != nil {
+				log.Println("stop buffer:", err)
+			}
+			native.GUISetBuffering(false)
+			log.Println("buffer stopped")
+		},
+		OnSaveClip: func() {
+			if _, err := br.SaveClip(); err != nil {
+				log.Println("save clip:", err)
+			}
+		},
+		OnOpenFolder: func() {
+			_ = exec.Command("open", br.OutputDir()).Run()
+		},
+		OnQuit: func() {
+			if br.IsActive() {
+				_ = br.Stop()
+			}
+			native.GUIQuit()
+		},
+	})
 }
