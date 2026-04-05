@@ -1,0 +1,4 @@
+/shadowplay
+*.mov
+*.mp4
+.DS_Store
