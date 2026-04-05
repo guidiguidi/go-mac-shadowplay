@@ -5,6 +5,8 @@ package native
 import (
 	"errors"
 	"log"
+
+	"github.com/guidiguidi/go-mac-shadowplay/internal/config"
 )
 
 // Stubs for darwin when CGO is disabled (e.g. gopls/IDE default). Real
@@ -23,7 +25,7 @@ func RollingStop() error                          { return errNoCgo }
 func RollingActive() bool                         { return false }
 func ExportLast(string, float64) error            { return errNoCgo }
 
-func RunGUI(GUICallbacks) {
+func RunGUI(string, config.Config, GUICallbacks) {
 	log.Fatal(errNoCgo)
 }
 

@@ -51,6 +51,27 @@ func Load(path string) (Config, error) {
 	return c, nil
 }
 
+// Save writes config as YAML. Paths with ~/ are expanded before writing.
+func Save(path string, c Config) error {
+	if path == "" {
+		return fmt.Errorf("config path empty")
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	c.OutputDir = expandPath(c.OutputDir)
+	c.TempDir = expandPath(c.TempDir)
+	b, err := yaml.Marshal(&c)
+	if err != nil {
+		return fmt.Errorf("marshal yaml: %w", err)
+	}
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	return nil
+}
+
 func expandPath(s string) string {
 	if strings.HasPrefix(s, "~/") {
 		home, err := os.UserHomeDir()

@@ -156,7 +156,8 @@ func cmdGUI(args []string) {
 
 	br := runner.NewBufferRunner(cfg)
 
-	native.RunGUI(native.GUICallbacks{
+	native.RunGUI(*cfgPath, cfg, native.GUICallbacks{
+		IsBufferActive: br.IsActive,
 		OnStartBuffer: func() {
 			if err := br.Start(); err != nil {
 				log.Println("start buffer:", err)
@@ -179,6 +180,9 @@ func cmdGUI(args []string) {
 		},
 		OnOpenFolder: func() {
 			_ = exec.Command("open", br.OutputDir()).Run()
+		},
+		OnConfigSaved: func(c config.Config) {
+			br.SetConfig(c)
 		},
 		OnQuit: func() {
 			if br.IsActive() {

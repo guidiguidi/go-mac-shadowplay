@@ -52,7 +52,7 @@ While buffer mode is running:
 ./shadowplay gui -config ./shadowplay.example.yaml
 ```
 
-The icon appears in the menu bar (SF Symbol `record.circle`). Click it to start/stop the buffer, save a clip, or open the clips folder. Global hotkeys from the config are also active while the buffer is running.
+The icon appears in the menu bar (SF Symbol `record.circle`). Click it to start/stop the buffer, save a clip, open the clips folder, or **Preferences…** (⌘,) to edit buffer length, clip length, folders, and hotkey strings. Settings are saved as YAML (the path from `-config`, or `~/.config/shadowplay/config.yaml` if you did not pass `-config`). While the buffer is running, open Preferences only after stopping—the app will remind you if needed.
 
 ## Configuration
 

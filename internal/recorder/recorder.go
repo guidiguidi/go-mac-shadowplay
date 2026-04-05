@@ -17,6 +17,9 @@ type Recorder struct {
 
 func New(cfg config.Config) *Recorder { return &Recorder{cfg: cfg} }
 
+// SetConfig updates paths and timing used by SaveClip / buffer (apply while stopped for hotkeys).
+func (r *Recorder) SetConfig(cfg config.Config) { r.cfg = cfg }
+
 func (r *Recorder) StartRecording(outputPath string) error {
 	if outputPath == "" {
 		return fmt.Errorf("output path required")

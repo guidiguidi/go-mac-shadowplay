@@ -5,11 +5,15 @@
 extern "C" {
 #endif
 
-/* Safe from any thread; blocks until the status item exists on the main thread. */
 void sp_gui_install_status_item_sync(void);
 
 void sp_gui_set_buffering(int active);
 void sp_gui_quit(void);
+
+/* Returns 1 if user clicked OK (json_out is malloc'd UTF-8 JSON); 0 if cancelled. */
+int sp_gui_prefs_modal(const char *json_in, char **json_out);
+
+void sp_gui_alert(const char *title, const char *message);
 
 #ifdef __cplusplus
 }

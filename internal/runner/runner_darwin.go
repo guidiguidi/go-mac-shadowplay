@@ -67,6 +67,12 @@ func (br *BufferRunner) IsActive() bool { return br.active }
 
 func (br *BufferRunner) OutputDir() string { return br.cfg.OutputDir }
 
+// SetConfig updates in-memory settings; hotkeys stay registered until Stop/Start.
+func (br *BufferRunner) SetConfig(cfg config.Config) {
+	br.cfg = cfg
+	br.rec.SetConfig(cfg)
+}
+
 func (br *BufferRunner) registerHotkeys() error {
 	mSave, kSave, err := hotkeyparse.Parse(br.cfg.SaveHotkey)
 	if err != nil {
