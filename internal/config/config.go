@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -45,5 +46,18 @@ func Load(path string) (Config, error) {
 	if err := yaml.Unmarshal(b, &c); err != nil {
 		return c, fmt.Errorf("parse config: %w", err)
 	}
+	c.OutputDir = expandPath(c.OutputDir)
+	c.TempDir = expandPath(c.TempDir)
 	return c, nil
+}
+
+func expandPath(s string) string {
+	if strings.HasPrefix(s, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return s
+		}
+		return filepath.Join(home, strings.TrimPrefix(s, "~/"))
+	}
+	return s
 }
