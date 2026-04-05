@@ -1,0 +1,12 @@
+# Copy to ~/.config/shadowplay/config.yaml or pass -config
+
+buffer_minutes: 10
+clip_seconds: 30
+segment_seconds: 3
+
+# Rolling segments and exported clips
+temp_dir: /tmp/shadowplay-buffer
+output_dir: ~/Movies/ShadowPlay
+
+save_hotkey: cmd+shift+s
+record_hotkey: cmd+shift+r
