@@ -25,10 +25,11 @@ CGO_ENABLED=1 go build -o shadowplay ./cmd/shadowplay
 
 ## Usage
 
-**Manual recording** (until Ctrl+C):
+**Manual recording** — stop with **Ctrl+C** or **`record_hotkey`** from config (default `cmd+shift+r`):
 
 ```bash
 ./shadowplay record -o ~/Movies/capture.mov
+./shadowplay record -o ~/Movies/capture.mov -config ./shadowplay.example.yaml
 ```
 
 **Instant replay buffer** — keeps rolling segment files under `temp_dir`, trims by `buffer_minutes`:
@@ -40,7 +41,8 @@ CGO_ENABLED=1 go build -o shadowplay ./cmd/shadowplay
 
 While buffer mode is running:
 
-- **⌘⇧S** — export the last `clip_seconds` (from config, default 30s) to `output_dir` as `clip_YYYYMMDD_HHMMSS.mp4`
+- **`save_hotkey`** (default `cmd+shift+s`) — export the last `clip_seconds` to `output_dir` as `clip_YYYYMMDD_HHMMSS.mp4`
+- **`record_hotkey`** (default `cmd+shift+r`) — if different from `save_hotkey`, same save action (second shortcut). One capture stream cannot start a separate manual record while buffering.
 - **Ctrl+C** — stop and exit
 
 ## Configuration
@@ -54,8 +56,10 @@ Optional YAML fields (see `shadowplay.example.yaml`):
 | `segment_seconds` | Length of each internal segment file |
 | `temp_dir` | Where segment `.mov` files are stored |
 | `output_dir` | Where exported clips are saved |
+| `save_hotkey` | Global shortcut to save a replay clip in buffer mode |
+| `record_hotkey` | In **record** mode: stop recording. In **buffer** mode: extra save shortcut if different from `save_hotkey` |
 
-Hotkey strings in YAML are reserved for future use; **⌘⇧S** is fixed in code for now.
+Hotkey format: modifiers and key separated by `+`, lowercase. Modifiers: `cmd`, `shift`, `ctrl`, `alt` / `option`. Keys: `a`–`z`, `0`–`9`, `f1`–`f20`, `space`, `return`, `tab`, `esc`, arrows. Examples: `cmd+shift+s`, `ctrl+alt+f10`.
 
 ## Limits
 
