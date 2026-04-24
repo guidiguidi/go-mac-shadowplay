@@ -1,6 +1,7 @@
 #import "gui.h"
 #import <Cocoa/Cocoa.h>
 #import <objc/runtime.h>
+#import <UserNotifications/UserNotifications.h>
 
 extern void shadowplayGuiOnStartBuffer(void);
 extern void shadowplayGuiOnStopBuffer(void);
@@ -82,11 +83,14 @@ static NSStackView *SPPrefsLabeledRow(NSString *labelText, NSString *value) {
     label.editable = NO;
     label.selectable = NO;
     label.alignment = NSTextAlignmentRight;
+    label.font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
     [label setContentHuggingPriority:NSLayoutPriorityRequired
                       forOrientation:NSLayoutConstraintOrientationHorizontal];
 
     NSTextField *field = [[NSTextField alloc] initWithFrame:NSZeroRect];
     field.stringValue = value ?: @"";
+    field.bezelStyle = NSTextFieldSquareBezel;
+    field.font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
     [field setContentHuggingPriority:NSLayoutPriorityDefaultLow
                     forOrientation:NSLayoutConstraintOrientationHorizontal];
 
@@ -96,6 +100,9 @@ static NSStackView *SPPrefsLabeledRow(NSString *labelText, NSString *value) {
     row.alignment = NSLayoutAttributeCenterY;
     [row addArrangedSubview:label];
     [row addArrangedSubview:field];
+
+    [label.widthAnchor constraintEqualToConstant:140].active = YES;
+
     objc_setAssociatedObject(row, "field", field, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return row;
 }
@@ -126,6 +133,7 @@ static SPMenuDelegate *g_menuDelegate;
                                                 action:@selector(onStart:)
                                          keyEquivalent:@""];
     self.startItem.target = self;
+    self.startItem.image = [NSImage imageWithSystemSymbolName:@"play.circle" accessibilityDescription:nil];
     [menu addItem:self.startItem];
 
     self.stopItem = [[NSMenuItem alloc] initWithTitle:@"Stop Buffer"
@@ -133,6 +141,7 @@ static SPMenuDelegate *g_menuDelegate;
                                         keyEquivalent:@""];
     self.stopItem.target = self;
     self.stopItem.enabled = NO;
+    self.stopItem.image = [NSImage imageWithSystemSymbolName:@"stop.circle" accessibilityDescription:nil];
     [menu addItem:self.stopItem];
 
     [menu addItem:[NSMenuItem separatorItem]];
@@ -142,6 +151,7 @@ static SPMenuDelegate *g_menuDelegate;
                                         keyEquivalent:@""];
     self.saveItem.target = self;
     self.saveItem.enabled = NO;
+    self.saveItem.image = [NSImage imageWithSystemSymbolName:@"arrow.down.circle" accessibilityDescription:nil];
     [menu addItem:self.saveItem];
 
     [menu addItem:[NSMenuItem separatorItem]];
@@ -150,18 +160,20 @@ static SPMenuDelegate *g_menuDelegate;
                                                       action:@selector(onOpenFolder:)
                                                keyEquivalent:@""];
     openItem.target = self;
+    openItem.image = [NSImage imageWithSystemSymbolName:@"folder" accessibilityDescription:nil];
     [menu addItem:openItem];
 
-    NSMenuItem *prefsItem = [[NSMenuItem alloc] initWithTitle:@"Preferences…"
+    NSMenuItem *prefsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…"
                                                        action:@selector(onPrefs:)
                                                 keyEquivalent:@","];
     prefsItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
     prefsItem.target = self;
+    prefsItem.image = [NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:nil];
     [menu addItem:prefsItem];
 
     [menu addItem:[NSMenuItem separatorItem]];
 
-    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
+    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit ShadowPlay"
                                                       action:@selector(onQuit:)
                                                keyEquivalent:@"q"];
     quitItem.target = self;
@@ -241,6 +253,30 @@ void sp_gui_quit(void) {
     });
 }
 
+void sp_gui_notify(const char *title, const char *message) {
+    if (!title || !message) return;
+    NSString *nsTitle = [NSString stringWithUTF8String:title];
+    NSString *nsMsg = [NSString stringWithUTF8String:message];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+        [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound)
+                              completionHandler:^(BOOL granted, NSError * _Nullable error) {
+            if (granted) {
+                UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+                content.title = nsTitle;
+                content.body = nsMsg;
+                content.sound = [UNNotificationSound defaultSound];
+
+                UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@"ShadowPlayClipSaved"
+                                                                                    content:content
+                                                                                    trigger:nil];
+                [center addNotificationRequest:request withCompletionHandler:nil];
+            }
+        }];
+    });
+}
+
 int sp_gui_prefs_modal(const char *json_in, char **json_out) {
     if (json_out) {
         *json_out = NULL;
@@ -297,24 +333,43 @@ int sp_gui_prefs_modal(const char *json_in, char **json_out) {
         NSStackView *btnRow = [[NSStackView alloc] init];
         btnRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
         btnRow.spacing = 12;
-        [btnRow addArrangedSubview:okBtn];
+        
+        NSView *spacer = [[NSView alloc] init];
+        [btnRow addArrangedSubview:spacer];
+        
         [btnRow addArrangedSubview:cancelBtn];
+        [btnRow addArrangedSubview:okBtn];
 
         NSStackView *root = [[NSStackView alloc] init];
         root.orientation = NSUserInterfaceLayoutOrientationVertical;
-        root.spacing = 16;
-        root.edgeInsets = NSEdgeInsetsMake(20, 20, 20, 20);
+        root.spacing = 20;
+        root.edgeInsets = NSEdgeInsetsMake(24, 24, 24, 24);
         [root addArrangedSubview:stack];
         [root addArrangedSubview:btnRow];
 
-        NSRect r = NSMakeRect(0, 0, 520, 420);
+        NSVisualEffectView *vibrantView = [[NSVisualEffectView alloc] init];
+        vibrantView.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+        vibrantView.material = NSVisualEffectMaterialWindowBackground;
+        vibrantView.state = NSVisualEffectStateActive;
+        
+        NSRect r = NSMakeRect(0, 0, 520, 340);
         NSPanel *panel = [[NSPanel alloc] initWithContentRect:r
-                                                      styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable)
+                                                      styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskFullSizeContentView)
                                                         backing:NSBackingStoreBuffered
                                                           defer:NO];
         panel.title = @"ShadowPlay Settings";
-        panel.contentView = root;
-        [root setFrame:NSMakeRect(0, 0, 520, 420)];
+        panel.contentView = vibrantView;
+        [vibrantView addSubview:root];
+        root.translatesAutoresizingMaskIntoConstraints = NO;
+        [NSLayoutConstraint activateConstraints:@[
+            [root.topAnchor constraintEqualToAnchor:vibrantView.topAnchor],
+            [root.leadingAnchor constraintEqualToAnchor:vibrantView.leadingAnchor],
+            [root.trailingAnchor constraintEqualToAnchor:vibrantView.trailingAnchor],
+            [root.bottomAnchor constraintEqualToAnchor:vibrantView.bottomAnchor],
+        ]];
+
+        panel.titlebarAppearsTransparent = YES;
+        panel.titleVisibility = NSWindowTitleHidden;
 
         SPPrefsActions *acts = [[SPPrefsActions alloc] init];
         acts.fields = fields;

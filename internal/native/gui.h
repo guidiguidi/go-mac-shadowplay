@@ -10,6 +10,8 @@ void sp_gui_install_status_item_sync(void);
 void sp_gui_set_buffering(int active);
 void sp_gui_quit(void);
 
+void sp_gui_notify(const char *title, const char *message);
+
 /* Returns 1 if user clicked OK (json_out is malloc'd UTF-8 JSON); 0 if cancelled. */
 int sp_gui_prefs_modal(const char *json_in, char **json_out);
 

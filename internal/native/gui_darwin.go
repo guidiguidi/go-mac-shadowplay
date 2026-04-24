@@ -4,7 +4,7 @@ package native
 
 /*
 #cgo CFLAGS: -x objective-c -fobjc-arc
-#cgo LDFLAGS: -framework Cocoa
+#cgo LDFLAGS: -framework Cocoa -framework UserNotifications
 #include <stdlib.h>
 #include "gui.h"
 */
@@ -81,6 +81,15 @@ func GUISetBuffering(active bool) {
 // GUIQuit terminates the NSApp run loop.
 func GUIQuit() {
 	C.sp_gui_quit()
+}
+
+// GUINotify shows a macOS system notification.
+func GUINotify(title, message string) {
+	ct := C.CString(title)
+	cm := C.CString(message)
+	defer C.free(unsafe.Pointer(ct))
+	defer C.free(unsafe.Pointer(cm))
+	C.sp_gui_notify(ct, cm)
 }
 
 func getGUICB() GUICallbacks {

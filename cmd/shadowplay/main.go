@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -161,9 +162,11 @@ func cmdGUI(args []string) {
 		OnStartBuffer: func() {
 			if err := br.Start(); err != nil {
 				log.Println("start buffer:", err)
+				native.GUINotify("ShadowPlay Error", "Failed to start buffer")
 				return
 			}
 			native.GUISetBuffering(true)
+			native.GUINotify("ShadowPlay", "Buffer started")
 			log.Println("buffer started")
 		},
 		OnStopBuffer: func() {
@@ -171,12 +174,17 @@ func cmdGUI(args []string) {
 				log.Println("stop buffer:", err)
 			}
 			native.GUISetBuffering(false)
+			native.GUINotify("ShadowPlay", "Buffer stopped")
 			log.Println("buffer stopped")
 		},
 		OnSaveClip: func() {
-			if _, err := br.SaveClip(); err != nil {
+			path, err := br.SaveClip()
+			if err != nil {
 				log.Println("save clip:", err)
+				native.GUINotify("ShadowPlay Error", err.Error())
+				return
 			}
+			native.GUINotify("Clip Saved", filepath.Base(path))
 		},
 		OnOpenFolder: func() {
 			_ = exec.Command("open", br.OutputDir()).Run()
